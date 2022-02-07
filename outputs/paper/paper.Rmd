@@ -1,0 +1,122 @@
+---
+title: "Toronto Police Search of Persons Statistics Setbacks"
+author: "Mingyang Li"
+thanks: "Code and data are available at: https://github.com/samlmy/TorontoSearchOfPersonsSetbacks"
+date: "`r format(Sys.time(), '%d %B %Y')`"
+abstract: "Data of search of persons is an important resource that can be used to spot setbacks in the values of Toronto Police Services. However, incomplete information that is not up to date can generate a lot of biased results and makes it difficult for further improvement. We found that the current Toronto Police Annual Statistical Report shows the overall number of strip searches conducted is decreasing, but number of searches that meet certain criteria remains the same. We suspect that the involvement of new forms of level 3 searches and data collection was not included in the current dataset, causing misinformation and difficulty in generating meaningful results for future improvement."
+output:
+  bookdown::pdf_document2
+toc: FALSE
+bibliography: references.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+#import tidyverse package
+library(tidyverse)
+```
+
+# Introduction
+
+Conducting searches ensures not only the safety of police officers, but also helps them gather any potential criminal evidence. It can sometimes even prevent people from escaping using concealed tools [@citeSearch]. This kind of procedure is lawful when conducted under the right circumstances, but is questionable in its appropriateness as the tactics used are extremely invasive towards an individual's privacy. Though the police are specifically looking for unnoticed hazards, it is very hard to avoid finding personal items that the person would not like to be shown to others. Besides, there is a societal concern that unreasonable measures are being used to target minorities due to their race, gender or age [@citeLit]. This is where data plays an important role, since it is able to tell us whether the police have been abusing their power, and analyse social concerns such as racial profiling. However, to do any sort of statistical analysis, it is very important to have the right amount of data and sufficient information. Miscounts and neglecting information would likely lead to biased results, which is against the ethics of data analysis. 
+
+In 2019, the Toronto Police Service (TPS) officially made the data collection of race, mandatory when conducting level 3 searches, also known as a strip search [@citeRace]. In doing so, they wanted to find where racism is rooted in the system, and make improvements to fulfill the Anti-Racism Act [@citeRace]. With the data made public by the TPS , the following report will closely examine the type of issues that the current version of data may reflect. The analysis is conducted through the use of the statistical programming language R [@citeR].
+
+
+# Data
+
+The data this report focuses on is the Police Annual Statistical Report regarding the details of Search of Persons. It was published on the Open Data Toronto website by the TPS. The data was last updated on August 12th, 2021, and scored Gold for its quality. The report accessed the dataset through the `opendatatoronto` package prepared for R developers [@citeopendatatoronto]. Then, `tidyverse` allows us to load the dataset that we downloaded from the portal [@citeTidyverse].
+
+The obtained dataset consists of an overview of the statistics of Level 3 and Level 4 searches conducted from 2014 to 2020. Due to privacy concerns, the TPS is obligated to exclude any personal details in this open dataset [@citeopendatatoronto]. While the "Race and Identity-Based Data Collection" states that TPS are allowed to collect race-based data of the person that is searched for analysis and reporting purposes, the dataset did not include any primary identifying information, such as race and gender [@citeSearch]. Instead, the dataset only indicates whether the person identifies themselves as transgender. 
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+#load dataset
+search_of_person <- read_csv(here::here("inputs/data/search_of_person.csv"), show_col_types = FALSE)
+
+```
+The search of persons dataset is aggregated by the year of searches conducted and the criteria that the searches meet. There are 186 observations and 13 attributes. Table 1 is made with `knitr` to demonstrate sample data; null and `id` attributes are excluded [@citeknitr]. The count attribute is grouped by the 9 other attributes, indicating how many people were searched under that category.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+library(knitr)
+#make table to show sample data of the search of persons dataset
+search_of_person |>
+  select(SearchYear, SearchLevel, SelfIdentifyTrans, Evidence, Escape_, Injury, Other, Count_, ItemsFound) |>
+  slice(1:10) |>
+  kable(
+    caption = 
+      "First ten rows of Police Annual Statistical Report-Search of Person",
+    col.names = c( "Year", 
+                  "Search Level", 
+                  "Trans", 
+                  "Evidence", 
+                  "Escape",
+                  "Injury",
+                  "Other",
+                  "Count",
+                  "ItemsFound"),
+    digits = 1,
+    booktabs = TRUE,
+    linesep = ""
+  )
+```
+
+```{r, echo=FALSE, fig.cap="Barcharts of Search Under Different Categories", warning=FALSE, message=FALSE}
+#Creating bar chart of search count every year in different categories
+library(ggplot2)
+p1<-ggplot(search_of_person, aes(x=SearchYear, y=Count_, fill=SelfIdentifyTrans)) +
+  geom_bar(stat="identity")+
+  ggtitle("Trans Identity") +
+  xlab("Search Year") + ylab("Count") + labs(fill = "Trans") +
+  scale_fill_brewer(palette="Paired")+
+  theme_minimal()
+
+p2<-ggplot(search_of_person, aes(x=SearchYear, y=Count_, fill=Evidence)) +
+  geom_bar(stat="identity")+
+  ggtitle("Search Yield Evidence") +
+  xlab("Search Year") + ylab("Count") + labs(fill = "Evidence") +
+  scale_fill_brewer(palette="Paired")+
+  theme_minimal()
+
+p3<-ggplot(search_of_person, aes(x=SearchYear, y=Count_, fill=Escape_)) +
+  geom_bar(stat="identity")+
+  ggtitle("Searched Individual Escape") +
+  xlab("Search Year") + ylab("Count") + labs(fill = "Escape") +
+  scale_fill_brewer(palette="Paired")+
+  theme_minimal()
+
+p4<-ggplot(search_of_person, aes(x=SearchYear, y=Count_, fill=Injury)) +
+  geom_bar(stat="identity")+
+  ggtitle("Searched Individual injured") +
+  xlab("Search Year") + ylab("Count") + labs(fill = "Injury") +
+  scale_fill_brewer(palette="Paired")+
+  theme_minimal()
+
+p5<-ggplot(search_of_person, aes(x=SearchYear, y=Count_, fill=Other)) +
+  geom_bar(stat="identity")+
+  ggtitle("Other Category") +
+  xlab("Search Year") + ylab("Count") + labs(fill = "Other") +
+  scale_fill_brewer(palette="Paired")+
+  theme_minimal()
+
+p6<-ggplot(search_of_person, aes(x=SearchYear, y=Count_, fill=ItemsFound)) +
+  geom_bar(stat="identity")+
+  ggtitle("Found Items on Individual") +
+  xlab("Search Year") + ylab("Count") + labs(fill = "Items") +
+  scale_fill_brewer(palette="Paired")+
+  theme_minimal()
+
+library(ggpubr)
+#Combining the plots into one figure
+figure <- ggarrange(p1, p2, p3, p4, p5, p6,
+                    labels = c("A", "B", "C", "A", "B", "C"),
+                    ncol = 2, nrow = 3)
+figure
+```
+
+Using `ggplot2` [@citeggplot], we are able to visualize the dataset into bar charts. Then, we combine those relevant graphs into one figure using `ggpubr` [@citeggpubr]. Figure 1 illustrates the number of total searches from 2014 to 2020 and each category's demographics are depicted in color. Overall, the number of level 3 and level 4 searches are decreasing every year; 2020 had only half the number of searches from the previous year. As we all know, 2020 was the year of the COVID-19 pandemic. It is expected that less people were at risk of being searched, and police services were distributed differently than normal to prevent the spread of the virus. Nonetheless, from 2014 to 2019 the downwards trend is still very apparent. As the Supreme Court outlines, strip searches should have a very high threshold of justification because they are hurtful to one's dignity and privacy [@citeSearch]. However, the decreasing trend does not necessarily mean that the TPS are more cautious in using level 3 and 4 searches. As a 2018 CBC report mentions, the TPS introduced a new technology, the full body scanner, that provides an alternative to strip searches [@citeScan]. This piece of technology is capable of detecting foreign items on a body through machinery. Thus, if the incident involved using the scanner, it would not be considered a level 3 search and would not show up in this dataset. As a result, the total number of searches could rise or remain the same if strip searches were not replaced by technology. Also, using the full body scanner is basically equivalent to the function of a level 3 search, but the published dataset does not specify the real number of all forms of searches, therefore the data is incomplete.
+
+It is noteworthy that the number of searches that meet the given category remains mostly stationary every recorded year. In other words, the proportion of searches that yield evidence, the instances of the searched individual escaping, being injured or items found are increasing every year. This suggests that despite overall less searches being conducted, there is a higher chance of searches resulting in escape, causing injury and successfully finding the item. Yet as we mentioned earlier, level 3 and 4 searches are occasionally being replaced by a full body scan, the upward trend of each category could be statistically biased. 
+
+
+
+\newpage
+# References
